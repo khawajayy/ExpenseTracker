@@ -10,7 +10,7 @@
 // ============================================================
 
 export const SUPABASE_URL = "https://fgrgurypmlwskadirlcu.supabase.co";       // e.g. https://abcdxyz.supabase.co
-export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZncmd1cnlwbWx3c2thZGlybGN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyNjU4MTQsImV4cCI6MjA5OTg0MTgxNH0.YgS6fDfh8IMq4grmpRmFbmxFuz27kcGt7q6LdoryGeE";
+export const SUPABASE_ANON_KEY = "sb_publishable_mnnTn6qpTot7Wc0l8f3Ppw_t7icPm5U";
 
 // App settings
 export const CURRENCY_PREFIX = "Rs";   // shown before every amount

@@ -9,8 +9,8 @@
 //     so the anon key alone cannot read or write anyone's rows.
 // ============================================================
 
-export const SUPABASE_URL = "YOUR_SUPABASE_URL";       // e.g. https://abcdxyz.supabase.co
-export const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+export const SUPABASE_URL = "https://fgrgurypmlwskadirlcu.supabase.co";       // e.g. https://abcdxyz.supabase.co
+export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZncmd1cnlwbWx3c2thZGlybGN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyNjU4MTQsImV4cCI6MjA5OTg0MTgxNH0.YgS6fDfh8IMq4grmpRmFbmxFuz27kcGt7q6LdoryGeE";
 
 // App settings
 export const CURRENCY_PREFIX = "Rs";   // shown before every amount

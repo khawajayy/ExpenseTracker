@@ -6,7 +6,20 @@
   <meta name="theme-color" content="#0f1729" />
   <title>Expense Tracker</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%B3%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <!-- ===== Cache-busting: bump the ?v= number below on every deploy ===== -->
+  <!-- To release an update: replace every "?v=2" in this file with the next number (?v=3, ?v=4, ...). -->
+  <link rel="stylesheet" href="css/styles.css?v=2" />
+  <script type="importmap">
+  {
+    "imports": {
+      "@config":    "./js/config.js?v=2",
+      "@supabase":  "./js/supabase.js?v=2",
+      "@constants": "./js/constants.js?v=2",
+      "@seed":      "./js/seed.js?v=2",
+      "@app":       "./js/app.js?v=2"
+    }
+  }
+  </script>
 </head>
 <body>
   <!-- ============ AUTH SCREEN ============ -->
@@ -59,14 +72,14 @@
     </header>
 
     <nav class="tabs">
-      <button class="tab active" data-view="dashboard">📊 Dashboard</button>
-      <button class="tab" data-view="transactions">📋 Transactions</button>
+      <button class="tab" data-view="dashboard">📊 Dashboard</button>
+      <button class="tab active" data-view="transactions">📋 Transactions</button>
       <button class="tab" data-view="networth">🏆 Net Worth</button>
     </nav>
 
     <main class="content">
       <!-- ---------- DASHBOARD ---------- -->
-      <section id="view-dashboard" class="view active">
+      <section id="view-dashboard" class="view">
         <div class="stat-grid">
           <div class="stat-card income">
             <div class="stat-label">⬆ Income</div>
@@ -103,7 +116,7 @@
       </section>
 
       <!-- ---------- TRANSACTIONS ---------- -->
-      <section id="view-transactions" class="view">
+      <section id="view-transactions" class="view active">
         <div class="panel">
           <div class="panel-head"><h2 id="txn-form-title">➕ Add Transaction</h2></div>
           <form id="txn-form" class="txn-form">
@@ -188,6 +201,6 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <script type="module" src="js/app.js"></script>
+  <script type="module">import "@app";</script>
 </body>
 </html>

@@ -1,14 +1,14 @@
-import { supabase, isConfigured } from "./supabase.js";
-import { CURRENCY_PREFIX } from "./config.js";
-import { CATEGORIES, categoryEmoji } from "./constants.js";
-import { SEED_TRANSACTIONS, SEED_ACCOUNTS } from "./seed.js";
+import { supabase, isConfigured } from "@supabase";
+import { CURRENCY_PREFIX } from "@config";
+import { CATEGORIES, categoryEmoji } from "@constants";
+import { SEED_TRANSACTIONS, SEED_ACCOUNTS } from "@seed";
 
 // ---------------------------------------------------------------------------
 //  State
 // ---------------------------------------------------------------------------
 const state = {
   user: null,
-  view: "dashboard",
+  view: "transactions",
   month: startOfCurrentMonth(),   // {year, month}  month is 1-12
   direction: "OUT",               // current form direction
   editingId: null,

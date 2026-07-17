@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f1729" />
+  <title>Expense Tracker</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%B3%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- ============ AUTH SCREEN ============ -->
+  <div id="auth-screen" class="auth-screen hidden">
+    <div class="auth-card">
+      <div class="auth-logo">💳</div>
+      <h1>Expense Tracker</h1>
+      <p class="auth-sub">Sign in to your personal ledger</p>
+      <form id="auth-form">
+        <label>Email
+          <input type="email" id="auth-email" autocomplete="email" required placeholder="you@example.com" />
+        </label>
+        <label>Password
+          <input type="password" id="auth-password" autocomplete="current-password" required minlength="6" placeholder="••••••••" />
+        </label>
+        <div id="auth-error" class="auth-error hidden"></div>
+        <div id="auth-message" class="auth-message hidden"></div>
+        <button type="submit" id="auth-submit" class="btn btn-primary btn-block">Sign in</button>
+      </form>
+      <div class="auth-toggle">
+        <span id="auth-toggle-text">New here?</span>
+        <button type="button" id="auth-toggle-btn" class="link-btn">Create an account</button>
+      </div>
+      <div id="auth-config-warning" class="config-warning hidden">
+        ⚠️ Supabase is not configured yet. Edit <code>js/config.js</code> with your project URL and anon key.
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SETUP / LOADING ============ -->
+  <div id="boot-screen" class="boot-screen">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- ============ MAIN APP ============ -->
+  <div id="app" class="app hidden">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="brand">💳 <strong>Expense Tracker</strong></span>
+      </div>
+      <div class="month-nav">
+        <button id="month-prev" class="icon-btn" aria-label="Previous month">‹</button>
+        <button id="month-label" class="month-label" title="Jump to current month">July 2026</button>
+        <button id="month-next" class="icon-btn" aria-label="Next month">›</button>
+      </div>
+      <div class="topbar-right">
+        <span id="user-email" class="user-email"></span>
+        <button id="signout-btn" class="btn btn-ghost btn-sm">Sign out</button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-view="dashboard">📊 Dashboard</button>
+      <button class="tab" data-view="transactions">📋 Transactions</button>
+      <button class="tab" data-view="networth">🏆 Net Worth</button>
+    </nav>
+
+    <main class="content">
+      <!-- ---------- DASHBOARD ---------- -->
+      <section id="view-dashboard" class="view active">
+        <div class="stat-grid">
+          <div class="stat-card income">
+            <div class="stat-label">⬆ Income</div>
+            <div class="stat-value" id="stat-income">Rs 0</div>
+          </div>
+          <div class="stat-card expense">
+            <div class="stat-label">⬇ Expenses</div>
+            <div class="stat-value" id="stat-expenses">Rs 0</div>
+          </div>
+          <div class="stat-card net">
+            <div class="stat-label">= Net Balance</div>
+            <div class="stat-value" id="stat-net">Rs 0</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>📂 Spending by Category</h2>
+            <span class="panel-sub" id="dash-month-sub"></span>
+          </div>
+          <div id="category-breakdown" class="category-breakdown">
+            <p class="empty-note">No expenses recorded for this month yet.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>🏆 Net Worth</h2></div>
+          <div class="networth-summary">
+            <div class="nw-item"><span>Total Assets</span><strong id="dash-assets">Rs 0</strong></div>
+            <div class="nw-item"><span>Total Bank Balances</span><strong id="dash-banks">Rs 0</strong></div>
+            <div class="nw-item nw-total"><span>Net Worth</span><strong id="dash-networth">Rs 0</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- TRANSACTIONS ---------- -->
+      <section id="view-transactions" class="view">
+        <div class="panel">
+          <div class="panel-head"><h2 id="txn-form-title">➕ Add Transaction</h2></div>
+          <form id="txn-form" class="txn-form">
+            <input type="hidden" id="txn-id" />
+            <div class="form-row">
+              <label>Date
+                <input type="date" id="txn-date" required />
+              </label>
+              <label>Amount (Rs)
+                <input type="number" id="txn-amount" min="0" step="0.01" required placeholder="0" inputmode="decimal" />
+              </label>
+            </div>
+            <label>Description
+              <input type="text" id="txn-desc" required placeholder="e.g. Grocery, Salary, Rent" maxlength="200" />
+            </label>
+            <div class="form-row">
+              <div class="segmented" role="tablist" aria-label="Direction">
+                <button type="button" class="seg active" data-dir="OUT">⬇ OUT (spent)</button>
+                <button type="button" class="seg" data-dir="IN">⬆ IN (received)</button>
+              </div>
+              <label id="category-wrap">Category
+                <select id="txn-category"></select>
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" id="txn-submit">Add Transaction</button>
+              <button type="button" class="btn btn-ghost hidden" id="txn-cancel">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Transactions</h2>
+            <span class="panel-sub" id="txn-count"></span>
+          </div>
+          <div id="txn-list" class="txn-list">
+            <p class="empty-note">No transactions this month.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- NET WORTH ---------- -->
+      <section id="view-networth" class="view">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>💎 Assets / Money Bound</h2>
+            <strong class="panel-total" id="assets-total">Rs 0</strong>
+          </div>
+          <div id="assets-list" class="account-list"></div>
+          <form id="asset-add-form" class="account-add">
+            <input type="text" id="asset-name" placeholder="New asset name" maxlength="60" required />
+            <input type="number" id="asset-balance" placeholder="Balance" step="0.01" inputmode="decimal" />
+            <button type="submit" class="btn btn-primary btn-sm">Add</button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>🏦 Bank Accounts</h2>
+            <strong class="panel-total" id="banks-total">Rs 0</strong>
+          </div>
+          <div id="banks-list" class="account-list"></div>
+          <form id="bank-add-form" class="account-add">
+            <input type="text" id="bank-name" placeholder="New account name" maxlength="60" required />
+            <input type="number" id="bank-balance" placeholder="Balance" step="0.01" inputmode="decimal" />
+            <button type="submit" class="btn btn-primary btn-sm">Add</button>
+          </form>
+        </div>
+
+        <div class="panel networth-final">
+          <div class="nw-item nw-total big"><span>🏆 Net Worth (Assets + Banks)</span><strong id="nw-final">Rs 0</strong></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <button id="seed-btn" class="link-btn hidden">Import starter data (July 2026)</button>
+      <span id="save-indicator" class="save-indicator"></span>
+    </footer>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

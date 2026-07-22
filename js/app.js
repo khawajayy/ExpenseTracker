@@ -230,10 +230,11 @@ function renderDashboard() {
   }
 
   // Net worth summary
-  const { assets, banks } = accountTotals();
+  const { assets, banks, debts, net: nw } = accountTotals();
   $("dash-assets").textContent = fmt(assets);
   $("dash-banks").textContent = fmt(banks);
-  $("dash-networth").textContent = fmt(assets + banks);
+  $("dash-debts").textContent = "− " + fmt(debts);
+  $("dash-networth").textContent = fmt(nw);
 }
 
 function renderTransactions() {
@@ -285,26 +286,27 @@ function txnRow(t) {
 }
 
 function accountTotals() {
-  let assets = 0, banks = 0;
+  let assets = 0, banks = 0, debts = 0;
   for (const a of state.accounts) {
     if (a.kind === "asset") assets += Number(a.balance);
-    else banks += Number(a.balance);
+    else if (a.kind === "bank") banks += Number(a.balance);
+    else if (a.kind === "debt") debts += Number(a.balance);
   }
-  return { assets, banks };
+  return { assets, banks, debts, net: assets + banks - debts };
 }
 
 function renderAccounts() {
   const assetRows = state.accounts.filter((a) => a.kind === "asset");
   const bankRows = state.accounts.filter((a) => a.kind === "bank");
+  const debtRows = state.accounts.filter((a) => a.kind === "debt");
   $("assets-list").innerHTML = assetRows.map(accountRow).join("") ||
     `<p class="empty-note">No assets yet.</p>`;
   $("banks-list").innerHTML = bankRows.map(accountRow).join("") ||
     `<p class="empty-note">No bank accounts yet.</p>`;
+  $("debts-list").innerHTML = debtRows.map(accountRow).join("") ||
+    `<p class="empty-note">No debts recorded — nice.</p>`;
 
-  const { assets, banks } = accountTotals();
-  $("assets-total").textContent = fmt(assets);
-  $("banks-total").textContent = fmt(banks);
-  $("nw-final").textContent = fmt(assets + banks);
+  renderAccountTotals();
 
   document.querySelectorAll(".account-bal").forEach((inp) => {
     inp.addEventListener("change", () => updateAccountBalance(inp.dataset.id, inp.value));
@@ -312,12 +314,21 @@ function renderAccounts() {
   document.querySelectorAll(".account-del").forEach((b) => {
     b.addEventListener("click", () => deleteAccount(b.dataset.id));
   });
+  document.querySelectorAll("[data-repay]").forEach((b) =>
+    b.addEventListener("click", () => adjustDebt(b.dataset.repay, "repay")));
+  document.querySelectorAll("[data-borrow]").forEach((b) =>
+    b.addEventListener("click", () => adjustDebt(b.dataset.borrow, "borrow")));
 }
 
 function accountRow(a) {
+  const debtActions = a.kind === "debt"
+    ? `<button class="debt-btn repay" data-repay="${a.id}" title="Record a repayment (logs an expense)">Repay</button>
+       <button class="debt-btn borrow" data-borrow="${a.id}" title="Record new borrowing (logs income)">Borrow</button>`
+    : "";
   return `
     <div class="account-row">
       <span class="account-name">${escapeHtml(a.name)}</span>
+      ${debtActions}
       <input class="account-bal" type="number" step="0.01" inputmode="decimal"
              value="${Number(a.balance)}" data-id="${a.id}" aria-label="${escapeHtml(a.name)} balance" />
       <button class="account-del" data-id="${a.id}" title="Remove">✕</button>
@@ -447,6 +458,44 @@ async function addAccount(kind, nameInput, balInput) {
   renderAll();
 }
 
+function todayISO() {
+  const n = new Date();
+  return `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}`;
+}
+
+// Repay (reduce debt, log an OUT expense) or Borrow (increase debt, log an IN).
+async function adjustDebt(id, mode) {
+  const debt = state.accounts.find((a) => a.id === id);
+  if (!debt) return;
+  const verb = mode === "repay" ? "repay" : "borrow";
+  const raw = prompt(`How much did you ${verb} for "${debt.name}"? (Rs)`);
+  if (raw === null) return;
+  const amount = parseFloat(raw);
+  if (!(amount > 0)) { toast("Enter an amount greater than 0.", true); return; }
+
+  const current = Number(debt.balance);
+  const newBalance = mode === "repay" ? Math.max(0, current - amount) : current + amount;
+  const txn = mode === "repay"
+    ? { txn_date: todayISO(), amount, description: `Repaid: ${debt.name}`, direction: "OUT", category: "Debt & Loans" }
+    : { txn_date: todayISO(), amount, description: `Borrowed: ${debt.name}`, direction: "IN", category: null };
+
+  try {
+    const { error: e1 } = await supabase.from("accounts").update({ balance: newBalance }).eq("id", id);
+    if (e1) throw e1;
+    const { error: e2 } = await supabase.from("transactions").insert(txn);
+    if (e2) throw e2;
+    debt.balance = newBalance;
+    // show the month the logged transaction landed in so the user sees it
+    const [y, m] = txn.txn_date.split("-").map(Number);
+    state.month = { year: y, month: m };
+    await loadTransactions();
+    renderAll();
+    toast(mode === "repay" ? "Repayment logged" : "Borrowing logged");
+  } catch (err) {
+    toast(err.message || "Could not update debt.", true);
+  }
+}
+
 async function updateAccountBalance(id, value) {
   const balance = parseFloat(value) || 0;
   const { error } = await supabase.from("accounts").update({ balance }).eq("id", id);
@@ -459,10 +508,14 @@ async function updateAccountBalance(id, value) {
 }
 
 function renderAccountTotals() {
-  const { assets, banks } = accountTotals();
+  const { assets, banks, debts, net: nw } = accountTotals();
   $("assets-total").textContent = fmt(assets);
   $("banks-total").textContent = fmt(banks);
-  $("nw-final").textContent = fmt(assets + banks);
+  $("debts-total").textContent = fmt(debts);
+  $("nwf-assets").textContent = fmt(assets);
+  $("nwf-banks").textContent = fmt(banks);
+  $("nwf-debts").textContent = "− " + fmt(debts);
+  $("nw-final").textContent = fmt(nw);
 }
 
 async function deleteAccount(id) {
@@ -564,6 +617,10 @@ function wireStaticHandlers() {
   $("bank-add-form").addEventListener("submit", (e) => {
     e.preventDefault();
     addAccount("bank", $("bank-name"), $("bank-balance"));
+  });
+  $("debt-add-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    addAccount("debt", $("debt-name"), $("debt-balance"));
   });
 
   $("seed-btn").addEventListener("click", importSeed);

@@ -26,7 +26,7 @@ create table if not exists public.accounts (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
   name        text not null,
-  kind        text not null check (kind in ('asset','bank')),
+  kind        text not null check (kind in ('asset','bank','debt')),
   balance     numeric(14,2) not null default 0,
   sort_order  int not null default 0,
   created_at  timestamptz not null default now()

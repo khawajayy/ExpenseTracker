@@ -7,16 +7,16 @@
   <title>Expense Tracker</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%B3%3C/text%3E%3C/svg%3E" />
   <!-- ===== Cache-busting: bump the ?v= number below on every deploy ===== -->
-  <!-- To release an update: replace every "?v=2" in this file with the next number (?v=3, ?v=4, ...). -->
-  <link rel="stylesheet" href="css/styles.css?v=2" />
+  <!-- To release an update: replace every "?v=3" in this file with the next number (?v=4, ?v=5, ...). -->
+  <link rel="stylesheet" href="css/styles.css?v=3" />
   <script type="importmap">
   {
     "imports": {
-      "@config":    "./js/config.js?v=2",
-      "@supabase":  "./js/supabase.js?v=2",
-      "@constants": "./js/constants.js?v=2",
-      "@seed":      "./js/seed.js?v=2",
-      "@app":       "./js/app.js?v=2"
+      "@config":    "./js/config.js?v=3",
+      "@supabase":  "./js/supabase.js?v=3",
+      "@constants": "./js/constants.js?v=3",
+      "@seed":      "./js/seed.js?v=3",
+      "@app":       "./js/app.js?v=3"
     }
   }
   </script>
@@ -110,6 +110,7 @@
           <div class="networth-summary">
             <div class="nw-item"><span>Total Assets</span><strong id="dash-assets">Rs 0</strong></div>
             <div class="nw-item"><span>Total Bank Balances</span><strong id="dash-banks">Rs 0</strong></div>
+            <div class="nw-item"><span>Total Debts</span><strong id="dash-debts" class="debt">− Rs 0</strong></div>
             <div class="nw-item nw-total"><span>Net Worth</span><strong id="dash-networth">Rs 0</strong></div>
           </div>
         </div>
@@ -187,8 +188,25 @@
           </form>
         </div>
 
+        <div class="panel">
+          <div class="panel-head">
+            <h2>💸 Debts / Liabilities</h2>
+            <strong class="panel-total debt" id="debts-total">Rs 0</strong>
+          </div>
+          <p class="panel-hint">Money you owe (loans, borrowed money). The total is subtracted from your net worth. Use <strong>Repay</strong> / <strong>Borrow</strong> to also log a transaction; edit the balance directly for a manual correction.</p>
+          <div id="debts-list" class="account-list"></div>
+          <form id="debt-add-form" class="account-add">
+            <input type="text" id="debt-name" placeholder="New debt name (e.g. Car loan)" maxlength="60" required />
+            <input type="number" id="debt-balance" placeholder="Amount owed" step="0.01" inputmode="decimal" />
+            <button type="submit" class="btn btn-primary btn-sm">Add</button>
+          </form>
+        </div>
+
         <div class="panel networth-final">
-          <div class="nw-item nw-total big"><span>🏆 Net Worth (Assets + Banks)</span><strong id="nw-final">Rs 0</strong></div>
+          <div class="nw-item"><span>Total Assets</span><strong id="nwf-assets">Rs 0</strong></div>
+          <div class="nw-item"><span>Total Bank Balances</span><strong id="nwf-banks">Rs 0</strong></div>
+          <div class="nw-item"><span>Total Debts</span><strong id="nwf-debts" class="debt">− Rs 0</strong></div>
+          <div class="nw-item nw-total big"><span>🏆 Net Worth</span><strong id="nw-final">Rs 0</strong></div>
         </div>
       </section>
     </main>

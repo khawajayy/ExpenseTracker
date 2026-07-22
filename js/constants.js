@@ -7,6 +7,7 @@ export const CATEGORIES = [
   { key: "Transport",                              emoji: "🚗" },
   { key: "Health & Lifestyle",                     emoji: "💊" },
   { key: "Savings, Investment & Other",            emoji: "📈" },
+  { key: "Debt & Loans",                           emoji: "💸" },
 ];
 
 export const CATEGORY_EMOJI = Object.fromEntries(

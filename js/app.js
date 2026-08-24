@@ -380,11 +380,17 @@ async function handleTxnSubmit(e) {
     } else {
       const { error } = await supabase.from("transactions").insert(payload);
       if (error) throw error;
-      // Auto-populate the Debts section when the title looks like "Debt - Name"
-      const debtName = parseDebtTitle(description);
-      if (debtName) {
-        await upsertDebtFromTitle(debtName, amount);
-        toast(`Transaction added · debt "${debtName}" updated`);
+      // Auto-sync the Debts section from the title:
+      //   "Debt paid - Name"  -> reduce that debt
+      //   "Debt - Name"       -> create / add to that debt
+      const paidName = parseDebtPayment(description);
+      const addName = paidName ? null : parseDebtTitle(description);
+      if (paidName) {
+        const found = await reduceDebtFromTitle(paidName, amount);
+        toast(found ? `Transaction added · debt "${paidName}" reduced` : `Transaction added · no debt named "${paidName}"`);
+      } else if (addName) {
+        await upsertDebtFromTitle(addName, amount);
+        toast(`Transaction added · debt "${addName}" updated`);
       } else {
         toast("Transaction added");
       }
@@ -407,6 +413,26 @@ async function handleTxnSubmit(e) {
 function parseDebtTitle(desc) {
   const m = String(desc).match(/^\s*debt\s*[-:–—]\s*(.+?)\s*$/i);
   return m && m[1] ? m[1].trim() : null;
+}
+
+// A transaction titled "Debt paid - Car loan" (also paid/repaid/payment/repayment)
+// maps to reducing the debt named "Car loan". Returns the name, or null.
+function parseDebtPayment(desc) {
+  const m = String(desc).match(/^\s*debt\s+(?:paid|repaid|payment|repayment)\s*[-:–—]\s*(.+?)\s*$/i);
+  return m && m[1] ? m[1].trim() : null;
+}
+
+// Reduce the named debt's balance (floored at 0). Returns false if no such debt.
+async function reduceDebtFromTitle(name, amount) {
+  const existing = state.accounts.find(
+    (a) => a.kind === "debt" && a.name.trim().toLowerCase() === name.toLowerCase()
+  );
+  if (!existing) return false;
+  const newBalance = Math.max(0, Number(existing.balance) - Number(amount));
+  const { error } = await supabase.from("accounts").update({ balance: newBalance }).eq("id", existing.id);
+  if (error) throw error;
+  existing.balance = newBalance;
+  return true;
 }
 
 // Create the named debt, or add to its balance if one with that name already exists.

@@ -380,18 +380,49 @@ async function handleTxnSubmit(e) {
     } else {
       const { error } = await supabase.from("transactions").insert(payload);
       if (error) throw error;
-      toast("Transaction added");
+      // Auto-populate the Debts section when the title looks like "Debt - Name"
+      const debtName = parseDebtTitle(description);
+      if (debtName) {
+        await upsertDebtFromTitle(debtName, amount);
+        toast(`Transaction added · debt "${debtName}" updated`);
+      } else {
+        toast("Transaction added");
+      }
     }
     resetTxnForm();
     // jump the selected month to match the transaction's month, then reload
     const [y, m] = date.split("-").map(Number);
     state.month = { year: y, month: m };
-    await loadTransactions();
+    await Promise.all([loadTransactions(), loadAccounts()]);
     renderAll();
   } catch (err) {
     toast(err.message || "Could not save.", true);
   } finally {
     btn.disabled = false;
+  }
+}
+
+// A transaction titled "Debt - Car loan" (also accepts ":" or no spaces) maps to
+// a debt named "Car loan". Returns the debt name, or null if it isn't a debt title.
+function parseDebtTitle(desc) {
+  const m = String(desc).match(/^\s*debt\s*[-:–—]\s*(.+?)\s*$/i);
+  return m && m[1] ? m[1].trim() : null;
+}
+
+// Create the named debt, or add to its balance if one with that name already exists.
+async function upsertDebtFromTitle(name, amount) {
+  const existing = state.accounts.find(
+    (a) => a.kind === "debt" && a.name.trim().toLowerCase() === name.toLowerCase()
+  );
+  if (existing) {
+    const newBalance = Number(existing.balance) + Number(amount);
+    const { error } = await supabase.from("accounts").update({ balance: newBalance }).eq("id", existing.id);
+    if (error) throw error;
+    existing.balance = newBalance;
+  } else {
+    const sort_order = state.accounts.filter((a) => a.kind === "debt").length;
+    const { error } = await supabase.from("accounts").insert({ name, kind: "debt", balance: amount, sort_order });
+    if (error) throw error;
   }
 }
 

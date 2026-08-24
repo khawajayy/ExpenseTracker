@@ -7,16 +7,16 @@
   <title>Expense Tracker</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%B3%3C/text%3E%3C/svg%3E" />
   <!-- ===== Cache-busting: bump the ?v= number below on every deploy ===== -->
-  <!-- To release an update: replace every "?v=3" in this file with the next number (?v=4, ?v=5, ...). -->
-  <link rel="stylesheet" href="css/styles.css?v=3" />
+  <!-- To release an update: replace every "?v=4" in this file with the next number (?v=5, ?v=6, ...). -->
+  <link rel="stylesheet" href="css/styles.css?v=4" />
   <script type="importmap">
   {
     "imports": {
-      "@config":    "./js/config.js?v=3",
-      "@supabase":  "./js/supabase.js?v=3",
-      "@constants": "./js/constants.js?v=3",
-      "@seed":      "./js/seed.js?v=3",
-      "@app":       "./js/app.js?v=3"
+      "@config":    "./js/config.js?v=4",
+      "@supabase":  "./js/supabase.js?v=4",
+      "@constants": "./js/constants.js?v=4",
+      "@seed":      "./js/seed.js?v=4",
+      "@app":       "./js/app.js?v=4"
     }
   }
   </script>
@@ -193,7 +193,7 @@
             <h2>💸 Debts / Liabilities</h2>
             <strong class="panel-total debt" id="debts-total">Rs 0</strong>
           </div>
-          <p class="panel-hint">Money you owe (loans, borrowed money). The total is subtracted from your net worth. Use <strong>Repay</strong> / <strong>Borrow</strong> to also log a transaction; edit the balance directly for a manual correction.</p>
+          <p class="panel-hint">Money you owe (loans, borrowed money). The total is subtracted from your net worth. Use <strong>Repay</strong> / <strong>Borrow</strong> to also log a transaction; edit the balance directly for a manual correction. Tip: adding a transaction titled <strong>“Debt - Name”</strong> auto-creates or tops up a debt called <em>Name</em> here.</p>
           <div id="debts-list" class="account-list"></div>
           <form id="debt-add-form" class="account-add">
             <input type="text" id="debt-name" placeholder="New debt name (e.g. Car loan)" maxlength="60" required />

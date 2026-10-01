@@ -4,3 +4,5 @@ node_modules/
 *.log
 .claude/
 scratchpad/
+test-results/
+playwright-report/

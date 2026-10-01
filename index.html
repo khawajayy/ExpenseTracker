@@ -3,20 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0f1729" />
-  <title>Expense Tracker</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%B3%3C/text%3E%3C/svg%3E" />
+  <meta name="theme-color" content="#0d1117" />
+  <meta name="description" content="Hamza's personal expense tracker — income, expenses, net worth, and budgeting." />
+  <title>Hamza's Expense Tracker</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💳%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <!-- ===== Cache-busting: bump the ?v= number below on every deploy ===== -->
-  <!-- To release an update: replace every "?v=5" in this file with the next number (?v=6, ?v=7, ...). -->
-  <link rel="stylesheet" href="css/styles.css?v=5" />
+  <!-- To release an update: replace every "?v=6" in this file with the next number (?v=7, ?v=8, ...). -->
+  <link rel="stylesheet" href="css/styles.css?v=6" />
   <script type="importmap">
   {
     "imports": {
-      "@config":    "./js/config.js?v=5",
-      "@supabase":  "./js/supabase.js?v=5",
-      "@constants": "./js/constants.js?v=5",
-      "@seed":      "./js/seed.js?v=5",
-      "@app":       "./js/app.js?v=5"
+      "@config":    "./js/config.js?v=6",
+      "@supabase":  "./js/supabase.js?v=6",
+      "@constants": "./js/constants.js?v=6",
+      "@seed":      "./js/seed.js?v=6",
+      "@app":       "./js/app.js?v=6"
     }
   }
   </script>
@@ -26,7 +30,7 @@
   <div id="auth-screen" class="auth-screen hidden">
     <div class="auth-card">
       <div class="auth-logo">💳</div>
-      <h1>Expense Tracker</h1>
+      <h1>Hamza's Expense Tracker</h1>
       <p class="auth-sub">Sign in to your personal ledger</p>
       <form id="auth-form">
         <label>Email
@@ -58,15 +62,15 @@
   <div id="app" class="app hidden">
     <header class="topbar">
       <div class="topbar-left">
-        <span class="brand">💳 <strong>Expense Tracker</strong></span>
+        <span class="brand">💳 <strong><span class="brand-accent">Hamza's</span> Expense Tracker</strong></span>
       </div>
       <div class="month-nav">
         <button id="month-prev" class="icon-btn" aria-label="Previous month">‹</button>
-        <button id="month-label" class="month-label" title="Jump to current month">July 2026</button>
+        <button id="month-label" class="month-label" title="Jump to current month">October 2026</button>
         <button id="month-next" class="icon-btn" aria-label="Next month">›</button>
       </div>
       <div class="topbar-right">
-        <span id="user-email" class="user-email"></span>
+        <span id="greeting" class="greeting"></span>
         <button id="signout-btn" class="btn btn-ghost btn-sm">Sign out</button>
       </div>
     </header>
@@ -92,6 +96,9 @@
           <div class="stat-card net">
             <div class="stat-label">= Net Balance</div>
             <div class="stat-value" id="stat-net">Rs 0</div>
+            <div class="savings-badge" id="savings-badge">
+              <span id="savings-rate">—</span>
+            </div>
           </div>
         </div>
 
@@ -154,6 +161,15 @@
             <h2>Transactions</h2>
             <span class="panel-sub" id="txn-count"></span>
           </div>
+          <div class="txn-toolbar">
+            <div class="search-wrap">
+              <input type="text" id="txn-search" placeholder="🔍 Search transactions..." aria-label="Search transactions" />
+            </div>
+            <select id="txn-filter-cat" class="filter-select" aria-label="Filter by category">
+              <option value="">All Categories</option>
+            </select>
+            <button type="button" id="csv-export" class="btn btn-ghost btn-sm">📥 Export</button>
+          </div>
           <div id="txn-list" class="txn-list">
             <p class="empty-note">No transactions this month.</p>
           </div>
@@ -193,7 +209,7 @@
             <h2>💸 Debts / Liabilities</h2>
             <strong class="panel-total debt" id="debts-total">Rs 0</strong>
           </div>
-          <p class="panel-hint">Money you owe (loans, borrowed money). The total is subtracted from your net worth. Use <strong>Repay</strong> / <strong>Borrow</strong> to also log a transaction; edit the balance directly for a manual correction. Tip: a transaction titled <strong>“Debt - Name”</strong> auto-creates or tops up a debt called <em>Name</em> here; <strong>“Debt paid - Name”</strong> reduces it.</p>
+          <p class="panel-hint">Money you owe (loans, borrowed money). The total is subtracted from your net worth. Use <strong>Repay</strong> / <strong>Borrow</strong> to also log a transaction; edit the balance directly for a manual correction. Tip: a transaction titled <strong>"Debt - Name"</strong> auto-creates or tops up a debt called <em>Name</em> here; <strong>"Debt paid - Name"</strong> reduces it.</p>
           <div id="debts-list" class="account-list"></div>
           <form id="debt-add-form" class="account-add">
             <input type="text" id="debt-name" placeholder="New debt name (e.g. Car loan)" maxlength="60" required />
@@ -215,6 +231,21 @@
       <button id="seed-btn" class="link-btn hidden">Import starter data (July 2026)</button>
       <span id="save-indicator" class="save-indicator"></span>
     </footer>
+  </div>
+
+  <!-- ============ MODAL ============ -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 id="modal-title"></h3>
+      <p id="modal-message" class="modal-message"></p>
+      <div id="modal-input-wrap" class="modal-input-wrap hidden">
+        <input type="text" id="modal-input" />
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="modal-cancel" class="btn btn-ghost">Cancel</button>
+        <button type="button" id="modal-confirm" class="btn btn-primary">Confirm</button>
+      </div>
+    </div>
   </div>
 
   <div id="toast" class="toast hidden"></div>

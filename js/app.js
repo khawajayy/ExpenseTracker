@@ -14,6 +14,8 @@ const state = {
   editingId: null,
   transactions: [],               // for selected month
   accounts: [],                   // all (global)
+  searchQuery: "",                // transaction search filter
+  filterCategory: "",             // transaction category filter
 };
 
 const $ = (id) => document.getElementById(id);
@@ -41,6 +43,18 @@ function fmt(n) {
   return `${CURRENCY_PREFIX} ${s}`;
 }
 
+function fmtCount(n) {
+  return Number(n).toLocaleString("en-US");
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning, Hamza ☀️";
+  if (hour < 17) return "Good afternoon, Hamza 🌤️";
+  if (hour < 21) return "Good evening, Hamza 🌆";
+  return "Good night, Hamza 🌙";
+}
+
 function toast(msg, isError = false) {
   const t = $("toast");
   t.textContent = msg;
@@ -51,10 +65,57 @@ function toast(msg, isError = false) {
 }
 
 // ---------------------------------------------------------------------------
+//  Modal system (replaces native confirm/prompt)
+// ---------------------------------------------------------------------------
+let _modalResolve = null;
+
+function showModal({ title, message, inputType = null, inputPlaceholder = "", confirmText = "Confirm", danger = false }) {
+  return new Promise((resolve) => {
+    _modalResolve = resolve;
+    $("modal-title").textContent = title;
+    $("modal-message").textContent = message;
+    const inputWrap = $("modal-input-wrap");
+    const input = $("modal-input");
+    if (inputType) {
+      input.type = inputType;
+      input.placeholder = inputPlaceholder;
+      input.value = "";
+      if (inputType === "number") input.setAttribute("inputmode", "decimal");
+      else input.removeAttribute("inputmode");
+      inputWrap.classList.remove("hidden");
+    } else {
+      inputWrap.classList.add("hidden");
+    }
+    const confirmBtn = $("modal-confirm");
+    confirmBtn.textContent = confirmText;
+    confirmBtn.className = danger ? "btn btn-danger" : "btn btn-primary";
+    $("modal-overlay").classList.remove("hidden");
+    if (inputType) { input.focus(); } else { confirmBtn.focus(); }
+  });
+}
+
+function closeModal(result) {
+  $("modal-overlay").classList.add("hidden");
+  if (_modalResolve) {
+    _modalResolve(result);
+    _modalResolve = null;
+  }
+}
+
+function modalConfirm(title, message, { confirmText = "Confirm", danger = false } = {}) {
+  return showModal({ title, message, confirmText, danger });
+}
+
+function modalPrompt(title, message, { inputType = "text", placeholder = "" } = {}) {
+  return showModal({ title, message, inputType, inputPlaceholder: placeholder, confirmText: "Confirm" });
+}
+
+// ---------------------------------------------------------------------------
 //  Boot
 // ---------------------------------------------------------------------------
 async function boot() {
   populateCategorySelect();
+  populateFilterCategories();
   wireStaticHandlers();
 
   if (!isConfigured) {
@@ -79,7 +140,7 @@ async function onAuthChange(session) {
     state.user = session.user;
     $("auth-screen").classList.add("hidden");
     $("app").classList.remove("hidden");
-    $("user-email").textContent = session.user.email;
+    $("greeting").textContent = getGreeting();
     await loadAll();
   } else {
     state.user = null;
@@ -171,15 +232,49 @@ async function loadAccounts() {
 }
 
 // ---------------------------------------------------------------------------
+//  Filtering
+// ---------------------------------------------------------------------------
+function getFilteredTransactions() {
+  let list = state.transactions;
+  const q = state.searchQuery.toLowerCase().trim();
+  const cat = state.filterCategory;
+
+  if (q) {
+    list = list.filter((t) =>
+      t.description.toLowerCase().includes(q) ||
+      (t.category && t.category.toLowerCase().includes(q))
+    );
+  }
+  if (cat === "__income__") {
+    list = list.filter((t) => t.direction === "IN");
+  } else if (cat) {
+    list = list.filter((t) => t.direction === "OUT" && t.category === cat);
+  }
+  return list;
+}
+
+function populateFilterCategories() {
+  const sel = $("txn-filter-cat");
+  sel.innerHTML = `<option value="">All Categories</option>
+    <option value="__income__">💰 Income</option>` +
+    CATEGORIES.map((c) => `<option value="${escapeHtml(c.key)}">${c.emoji} ${escapeHtml(c.key)}</option>`).join("");
+}
+
+// ---------------------------------------------------------------------------
 //  Rendering
 // ---------------------------------------------------------------------------
 function renderAll() {
   renderMonthLabel();
+  renderGreeting();
   renderDashboard();
   renderTransactions();
   renderAccounts();
   const empty = state.transactions.length === 0 && state.accounts.length === 0;
   $("seed-btn").classList.toggle("hidden", !empty);
+}
+
+function renderGreeting() {
+  $("greeting").textContent = getGreeting();
 }
 
 function renderMonthLabel() {
@@ -203,6 +298,21 @@ function renderDashboard() {
   const netEl = $("stat-net");
   netEl.textContent = fmt(net);
   netEl.classList.toggle("negative", net < 0);
+
+  // Savings rate badge
+  const badge = $("savings-badge");
+  const rateEl = $("savings-rate");
+  if (income > 0) {
+    const rate = Math.round(((income - expenses) / income) * 100);
+    rateEl.textContent = `💰 Savings Rate: ${rate}%`;
+    badge.className = "savings-badge";
+    if (rate >= 20) badge.classList.add("positive");
+    else if (rate >= 0) badge.classList.add("warning");
+    else badge.classList.add("negative");
+  } else {
+    rateEl.textContent = "No income this month";
+    badge.className = "savings-badge";
+  }
 
   // Category breakdown (expenses only)
   const byCat = {};
@@ -238,17 +348,23 @@ function renderDashboard() {
 }
 
 function renderTransactions() {
+  const filtered = getFilteredTransactions();
   const list = $("txn-list");
   $("txn-count").textContent = state.transactions.length
-    ? `${state.transactions.length} this month`
+    ? `${fmtCount(state.transactions.length)} this month` +
+      (filtered.length !== state.transactions.length ? ` · ${fmtCount(filtered.length)} shown` : "")
     : "";
-  if (state.transactions.length === 0) {
-    list.innerHTML = `<p class="empty-note">No transactions this month.</p>`;
+
+  if (filtered.length === 0) {
+    const msg = state.transactions.length === 0
+      ? "No transactions this month."
+      : "No transactions match your search.";
+    list.innerHTML = `<p class="empty-note">${msg}</p>`;
     return;
   }
   // group by day (descending — newest first)
   const groups = {};
-  for (const t of state.transactions) {
+  for (const t of filtered) {
     (groups[t.txn_date] ||= []).push(t);
   }
   const days = Object.keys(groups).sort((a, b) => b.localeCompare(a));
@@ -491,7 +607,12 @@ function defaultFormDate() {
 
 async function deleteTransaction(id) {
   const t = state.transactions.find((x) => x.id === id);
-  if (!confirm(`Delete "${t ? t.description : "this transaction"}"?`)) return;
+  const confirmed = await modalConfirm(
+    "Delete Transaction",
+    `Are you sure you want to delete "${t ? t.description : "this transaction"}"? This cannot be undone.`,
+    { confirmText: "Delete", danger: true }
+  );
+  if (!confirmed) return;
   const { error } = await supabase.from("transactions").delete().eq("id", id);
   if (error) { toast(error.message, true); return; }
   toast("Deleted");
@@ -525,7 +646,11 @@ async function adjustDebt(id, mode) {
   const debt = state.accounts.find((a) => a.id === id);
   if (!debt) return;
   const verb = mode === "repay" ? "repay" : "borrow";
-  const raw = prompt(`How much did you ${verb} for "${debt.name}"? (Rs)`);
+  const raw = await modalPrompt(
+    mode === "repay" ? "Record Repayment" : "Record Borrowing",
+    `How much did you ${verb} for "${debt.name}"?`,
+    { inputType: "number", placeholder: "Amount in Rs" }
+  );
   if (raw === null) return;
   const amount = parseFloat(raw);
   if (!(amount > 0)) { toast("Enter an amount greater than 0.", true); return; }
@@ -577,7 +702,12 @@ function renderAccountTotals() {
 
 async function deleteAccount(id) {
   const a = state.accounts.find((x) => x.id === id);
-  if (!confirm(`Remove "${a ? a.name : "this account"}"?`)) return;
+  const confirmed = await modalConfirm(
+    "Remove Account",
+    `Are you sure you want to remove "${a ? a.name : "this account"}"? This cannot be undone.`,
+    { confirmText: "Remove", danger: true }
+  );
+  if (!confirmed) return;
   const { error } = await supabase.from("accounts").delete().eq("id", id);
   if (error) { toast(error.message, true); return; }
   await loadAccounts();
@@ -592,10 +722,42 @@ function flashSaved() {
 }
 
 // ---------------------------------------------------------------------------
+//  CSV Export
+// ---------------------------------------------------------------------------
+function exportCSV() {
+  if (state.transactions.length === 0) {
+    toast("No transactions to export.", true);
+    return;
+  }
+  const header = "Date,Description,Category,Direction,Amount";
+  const rows = state.transactions.map((t) => {
+    const desc = `"${t.description.replace(/"/g, '""')}"`;
+    const cat = t.direction === "IN" ? "Income" : (t.category || "Uncategorised");
+    return `${t.txn_date},${desc},${cat},${t.direction},${t.amount}`;
+  });
+  const csv = [header, ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `hamza_expenses_${MONTH_NAMES[state.month.month - 1]}_${state.month.year}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast("CSV exported!");
+}
+
+// ---------------------------------------------------------------------------
 //  Seed import
 // ---------------------------------------------------------------------------
 async function importSeed() {
-  if (!confirm("Import the July 2026 starter data (56 transactions + account balances)?")) return;
+  const confirmed = await modalConfirm(
+    "Import Starter Data",
+    "Import the July 2026 starter data (56 transactions + account balances)? This will add sample data to your account.",
+    { confirmText: "Import" }
+  );
+  if (!confirmed) return;
   const btn = $("seed-btn");
   btn.disabled = true;
   btn.textContent = "Importing…";
@@ -681,6 +843,46 @@ function wireStaticHandlers() {
   });
 
   $("seed-btn").addEventListener("click", importSeed);
+
+  // Search & filter
+  $("txn-search").addEventListener("input", (e) => {
+    state.searchQuery = e.target.value;
+    renderTransactions();
+  });
+  $("txn-filter-cat").addEventListener("change", (e) => {
+    state.filterCategory = e.target.value;
+    renderTransactions();
+  });
+
+  // CSV export
+  $("csv-export").addEventListener("click", exportCSV);
+
+  // Modal
+  $("modal-cancel").addEventListener("click", () => closeModal(null));
+  $("modal-confirm").addEventListener("click", () => {
+    const inputWrap = $("modal-input-wrap");
+    if (!inputWrap.classList.contains("hidden")) {
+      closeModal($("modal-input").value);
+    } else {
+      closeModal(true);
+    }
+  });
+  $("modal-overlay").addEventListener("click", (e) => {
+    if (e.target === $("modal-overlay")) closeModal(null);
+  });
+  // Close modal on Escape
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("modal-overlay").classList.contains("hidden")) {
+      closeModal(null);
+    }
+  });
+  // Submit modal on Enter when input is focused
+  $("modal-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      closeModal($("modal-input").value);
+    }
+  });
 
   // initial form defaults
   setDirection("OUT");

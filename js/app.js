@@ -800,6 +800,364 @@ async function changeMonth(delta) {
 }
 
 // ---------------------------------------------------------------------------
+//  Provident Fund Calculator
+// ---------------------------------------------------------------------------
+function calculatePF() {
+  const initialBalance = Math.max(0, parseFloat($("pf-initial-balance")?.value) || 0);
+  const empMonthly = Math.max(0, parseFloat($("pf-emp-monthly")?.value) || 0);
+  const employerMonthly = Math.max(0, parseFloat($("pf-employer-monthly")?.value) || 0);
+  const years = Math.max(1, Math.min(50, parseInt($("pf-years-num")?.value, 10) || 15));
+  const annualRate = Math.max(0, parseFloat($("pf-interest-rate")?.value) || 0) / 100;
+  const annualIncrement = Math.max(0, parseFloat($("pf-annual-increment")?.value) || 0) / 100;
+  const taxEnabled = $("pf-tax-toggle")?.checked ?? true;
+  const taxRate = taxEnabled ? (Math.max(0, parseFloat($("pf-tax-rate")?.value) || 0) / 100) : 0;
+  const taxScope = $("pf-tax-scope")?.value || "interest";
+
+  const monthlyRate = annualRate / 12;
+
+  let currentBalance = initialBalance;
+  let totalEmployeeContrib = 0;
+  let totalEmployerContrib = 0;
+  let totalInterest = 0;
+
+  const schedule = [];
+
+  for (let y = 1; y <= years; y++) {
+    const growthFactor = Math.pow(1 + annualIncrement, y - 1);
+    const yEmpMonthly = empMonthly * growthFactor;
+    const yEmployerMonthly = employerMonthly * growthFactor;
+    const yTotalMonthly = yEmpMonthly + yEmployerMonthly;
+
+    let yearEmpContrib = 0;
+    let yearEmployerContrib = 0;
+    let yearInterest = 0;
+
+    for (let m = 1; m <= 12; m++) {
+      currentBalance += yTotalMonthly;
+      yearEmpContrib += yEmpMonthly;
+      yearEmployerContrib += yEmployerMonthly;
+
+      const mInterest = currentBalance * monthlyRate;
+      currentBalance += mInterest;
+      yearInterest += mInterest;
+    }
+
+    totalEmployeeContrib += yearEmpContrib;
+    totalEmployerContrib += yearEmployerContrib;
+    totalInterest += yearInterest;
+
+    let yearTax = 0;
+    if (taxEnabled) {
+      yearTax = taxScope === "interest" ? totalInterest * taxRate : currentBalance * taxRate;
+    }
+    const yearNet = Math.max(0, currentBalance - yearTax);
+
+    schedule.push({
+      year: y,
+      empContrib: yearEmpContrib,
+      employerContrib: yearEmployerContrib,
+      interest: yearInterest,
+      closingBalance: currentBalance,
+      netAfterTax: yearNet,
+    });
+  }
+
+  const grossMaturity = currentBalance;
+  let taxDeduction = 0;
+  if (taxEnabled) {
+    taxDeduction = taxScope === "interest" ? totalInterest * taxRate : grossMaturity * taxRate;
+  }
+  const netMaturity = Math.max(0, grossMaturity - taxDeduction);
+
+  return {
+    initialBalance,
+    totalEmployeeContrib,
+    totalEmployerContrib,
+    totalInterest,
+    grossMaturity,
+    taxDeduction,
+    netMaturity,
+    taxEnabled,
+    taxRate,
+    schedule,
+  };
+}
+
+function updatePFUI() {
+  const res = calculatePF();
+
+  const empMonthly = Math.max(0, parseFloat($("pf-emp-monthly")?.value) || 0);
+  const employerMonthly = Math.max(0, parseFloat($("pf-employer-monthly")?.value) || 0);
+  $("pf-total-monthly").textContent = fmt(empMonthly + employerMonthly);
+
+  const years = parseInt($("pf-years-num")?.value, 10) || 15;
+  $("pf-years-label").textContent = `${years} Year${years === 1 ? "" : "s"}`;
+
+  $("pf-result-net").textContent = fmt(res.netMaturity);
+  $("pf-result-gross").textContent = fmt(res.grossMaturity);
+
+  const taxStatusEl = $("pf-hero-tax-status");
+  const taxResultEl = $("pf-result-tax");
+  const taxLineEl = $("pf-hero-tax-line");
+
+  if (res.taxEnabled && res.taxRate > 0) {
+    taxStatusEl.textContent = `${(res.taxRate * 100).toFixed(1).replace(/\.0$/, "")}% Tax Applied`;
+    taxStatusEl.className = "pf-badge pf-badge-tax";
+    taxResultEl.textContent = `− ${fmt(res.taxDeduction)}`;
+    taxResultEl.className = "text-danger";
+    taxLineEl.style.display = "inline";
+  } else {
+    taxStatusEl.textContent = "Tax-Exempt (0%)";
+    taxStatusEl.className = "pf-badge pf-badge-tax exempt";
+    taxResultEl.textContent = "Rs 0";
+    taxResultEl.className = "text-success";
+    taxLineEl.style.display = "inline";
+  }
+
+  $("pf-stat-emp").textContent = fmt(res.totalEmployeeContrib);
+  $("pf-stat-emp-sub").textContent = `${fmt(empMonthly)} / mo`;
+
+  $("pf-stat-employer").textContent = fmt(res.totalEmployerContrib);
+  const matchRatio = empMonthly > 0 ? (employerMonthly / empMonthly) : 0;
+  $("pf-stat-employer-sub").textContent = `${(matchRatio * 100).toFixed(0)}% match`;
+
+  $("pf-stat-interest").textContent = fmt(res.totalInterest);
+  const interestRate = parseFloat($("pf-interest-rate")?.value) || 0;
+  $("pf-stat-interest-sub").textContent = `@ ${interestRate}% p.a.`;
+
+  $("pf-stat-tax").textContent = fmt(res.taxDeduction);
+  $("pf-stat-tax-sub").textContent = res.taxEnabled ? `${(res.taxRate * 100).toFixed(0)}% rate` : "Disabled";
+
+  const total = (res.totalEmployeeContrib + res.totalEmployerContrib + res.totalInterest) || 1;
+  const empPct = Math.round((res.totalEmployeeContrib / total) * 100);
+  const employerPct = Math.round((res.totalEmployerContrib / total) * 100);
+  const interestPct = Math.max(0, 100 - empPct - employerPct);
+
+  $("pf-bar-emp").style.width = `${empPct}%`;
+  $("pf-bar-employer").style.width = `${employerPct}%`;
+  $("pf-bar-interest").style.width = `${interestPct}%`;
+
+  $("pf-leg-emp-pct").textContent = `${empPct}%`;
+  $("pf-leg-employer-pct").textContent = `${employerPct}%`;
+  $("pf-leg-interest-pct").textContent = `${interestPct}%`;
+
+  renderPFSchedule(res.schedule);
+}
+
+function renderPFSchedule(schedule) {
+  const tbody = $("pf-schedule-tbody");
+  if (!tbody) return;
+  tbody.innerHTML = schedule.map((row) => `
+    <tr>
+      <td>Year ${row.year}</td>
+      <td>${fmt(row.empContrib)}</td>
+      <td>${fmt(row.employerContrib)}</td>
+      <td class="text-success">+ ${fmt(row.interest)}</td>
+      <td><strong>${fmt(row.closingBalance)}</strong></td>
+      <td>${fmt(row.netAfterTax)}</td>
+    </tr>
+  `).join("");
+}
+
+function openPFModal() {
+  const existingPF = state.accounts.find((a) =>
+    a.kind === "asset" && /provident|pf\b/i.test(a.name)
+  );
+  if (existingPF && (parseFloat($("pf-initial-balance").value) === 0 || !$("pf-initial-balance").value)) {
+    $("pf-initial-balance").value = Number(existingPF.balance) || 0;
+  }
+  updatePFUI();
+  $("pf-modal-overlay").classList.remove("hidden");
+  $("pf-emp-monthly").focus();
+}
+
+function closePFModal() {
+  $("pf-modal-overlay").classList.add("hidden");
+}
+
+async function savePFToAssets() {
+  const res = calculatePF();
+  const choice = await modalConfirm(
+    "Save to Assets",
+    `Save Provident Fund to your Assets register with the current accumulated balance of ${fmt(res.initialBalance)}? (You can update the balance input anytime in the calculator).`,
+    { confirmText: "Save to Assets" }
+  );
+  if (!choice) return;
+
+  const existingPF = state.accounts.find((a) =>
+    a.kind === "asset" && /provident|pf\b/i.test(a.name)
+  );
+
+  const balanceToSave = res.initialBalance;
+
+  try {
+    if (existingPF) {
+      const { error } = await supabase
+        .from("accounts")
+        .update({ balance: balanceToSave })
+        .eq("id", existingPF.id);
+      if (error) throw error;
+      existingPF.balance = balanceToSave;
+      toast(`Asset "${existingPF.name}" updated to ${fmt(balanceToSave)}`);
+    } else {
+      const sort_order = state.accounts.filter((a) => a.kind === "asset").length;
+      const { error } = await supabase
+        .from("accounts")
+        .insert({ name: "Provident Fund", kind: "asset", balance: balanceToSave, sort_order });
+      if (error) throw error;
+      toast(`"Provident Fund" added to Assets with ${fmt(balanceToSave)}`);
+    }
+    await loadAccounts();
+    renderAll();
+    closePFModal();
+  } catch (err) {
+    toast(err.message || "Failed to save asset.", true);
+  }
+}
+
+function wirePFHandlers() {
+  $("open-pf-calc")?.addEventListener("click", openPFModal);
+  $("pf-modal-close")?.addEventListener("click", closePFModal);
+  $("pf-modal-close-btn")?.addEventListener("click", closePFModal);
+
+  $("pf-modal-overlay")?.addEventListener("click", (e) => {
+    if (e.target === $("pf-modal-overlay")) closePFModal();
+  });
+
+  ["pf-initial-balance", "pf-interest-rate", "pf-annual-increment", "pf-tax-rate"].forEach((id) => {
+    $(id)?.addEventListener("input", updatePFUI);
+  });
+
+  $("pf-tax-scope")?.addEventListener("change", updatePFUI);
+
+  $("pf-emp-monthly")?.addEventListener("input", () => {
+    const activeSeg = document.querySelector(".pf-match-seg .seg.active");
+    const match = activeSeg ? activeSeg.dataset.match : "custom";
+    if (match !== "custom") {
+      const emp = parseFloat($("pf-emp-monthly").value) || 0;
+      $("pf-employer-monthly").value = Math.round(emp * parseFloat(match));
+    }
+    const currentVal = $("pf-emp-monthly").value;
+    document.querySelectorAll(".pf-chip[data-field='emp']").forEach((chip) => {
+      chip.classList.toggle("active", chip.dataset.val === currentVal);
+    });
+    updatePFUI();
+  });
+
+  document.querySelectorAll(".pf-chip[data-field='emp']").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      document.querySelectorAll(".pf-chip[data-field='emp']").forEach((c) => c.classList.remove("active"));
+      chip.classList.add("active");
+      $("pf-emp-monthly").value = chip.dataset.val;
+      $("pf-emp-monthly").dispatchEvent(new Event("input"));
+    });
+  });
+
+  document.querySelectorAll(".pf-match-seg .seg").forEach((seg) => {
+    seg.addEventListener("click", () => {
+      document.querySelectorAll(".pf-match-seg .seg").forEach((s) => s.classList.remove("active"));
+      seg.classList.add("active");
+      const match = seg.dataset.match;
+      if (match !== "custom") {
+        const emp = parseFloat($("pf-emp-monthly").value) || 0;
+        $("pf-employer-monthly").value = Math.round(emp * parseFloat(match));
+      }
+      updatePFUI();
+    });
+  });
+
+  $("pf-employer-monthly")?.addEventListener("input", () => {
+    const emp = parseFloat($("pf-emp-monthly").value) || 0;
+    const empyr = parseFloat($("pf-employer-monthly").value) || 0;
+    const ratio = emp > 0 ? (empyr / emp) : -1;
+    document.querySelectorAll(".pf-match-seg .seg").forEach((s) => {
+      const m = s.dataset.match;
+      if (m === "custom") {
+        s.classList.toggle("active", ratio !== 1 && ratio !== 0.5 && ratio !== 0);
+      } else {
+        s.classList.toggle("active", Math.abs(parseFloat(m) - ratio) < 0.001);
+      }
+    });
+    updatePFUI();
+  });
+
+  const yearsRange = $("pf-years-range");
+  const yearsNum = $("pf-years-num");
+  yearsRange?.addEventListener("input", () => {
+    yearsNum.value = yearsRange.value;
+    syncYearChips(yearsRange.value);
+    updatePFUI();
+  });
+  yearsNum?.addEventListener("input", () => {
+    yearsRange.value = yearsNum.value;
+    syncYearChips(yearsNum.value);
+    updatePFUI();
+  });
+
+  function syncYearChips(val) {
+    document.querySelectorAll(".pf-year-chip").forEach((chip) => {
+      chip.classList.toggle("active", chip.dataset.years === String(val));
+    });
+  }
+
+  document.querySelectorAll(".pf-year-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      syncYearChips(chip.dataset.years);
+      yearsRange.value = chip.dataset.years;
+      yearsNum.value = chip.dataset.years;
+      updatePFUI();
+    });
+  });
+
+  document.querySelectorAll(".pf-rate-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      document.querySelectorAll(".pf-rate-chip").forEach((c) => c.classList.remove("active"));
+      chip.classList.add("active");
+      $("pf-interest-rate").value = chip.dataset.rate;
+      updatePFUI();
+    });
+  });
+
+  $("pf-tax-toggle")?.addEventListener("change", (e) => {
+    const enabled = e.target.checked;
+    $("pf-tax-details").classList.toggle("hidden", !enabled);
+    updatePFUI();
+  });
+
+  document.querySelectorAll(".pf-tax-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      document.querySelectorAll(".pf-tax-chip").forEach((c) => c.classList.remove("active"));
+      chip.classList.add("active");
+      $("pf-tax-rate").value = chip.dataset.tax;
+      updatePFUI();
+    });
+  });
+
+  $("pf-schedule-toggle")?.addEventListener("click", () => {
+    const wrap = $("pf-schedule-wrap");
+    const isHidden = wrap.classList.toggle("hidden");
+    $("pf-schedule-arrow").textContent = isHidden ? "▼" : "▲";
+  });
+
+  $("pf-save-asset-btn")?.addEventListener("click", savePFToAssets);
+
+  $("pf-fetch-asset")?.addEventListener("click", () => {
+    const existingPF = state.accounts.find((a) =>
+      a.kind === "asset" && /provident|pf\b/i.test(a.name)
+    ) || state.accounts.find((a) => a.kind === "asset");
+    if (existingPF) {
+      $("pf-initial-balance").value = Number(existingPF.balance) || 0;
+      updatePFUI();
+      toast(`Loaded balance from "${existingPF.name}" (${fmt(existingPF.balance)})`);
+    } else {
+      toast("No asset accounts found to fetch from.", true);
+    }
+  });
+
+  updatePFUI();
+}
+
+// ---------------------------------------------------------------------------
 //  Wiring
 // ---------------------------------------------------------------------------
 function wireStaticHandlers() {
@@ -823,7 +1181,7 @@ function wireStaticHandlers() {
     renderAll();
   });
 
-  document.querySelectorAll(".seg").forEach((s) =>
+  document.querySelectorAll(".segmented[aria-label='Direction'] .seg").forEach((s) =>
     s.addEventListener("click", () => setDirection(s.dataset.dir)));
 
   $("txn-form").addEventListener("submit", handleTxnSubmit);
@@ -872,8 +1230,12 @@ function wireStaticHandlers() {
   });
   // Close modal on Escape
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !$("modal-overlay").classList.contains("hidden")) {
-      closeModal(null);
+    if (e.key === "Escape") {
+      if (!$("pf-modal-overlay").classList.contains("hidden")) {
+        closePFModal();
+      } else if (!$("modal-overlay").classList.contains("hidden")) {
+        closeModal(null);
+      }
     }
   });
   // Submit modal on Enter when input is focused
@@ -883,6 +1245,9 @@ function wireStaticHandlers() {
       closeModal($("modal-input").value);
     }
   });
+
+  // Wire Provident Fund Calculator
+  wirePFHandlers();
 
   // initial form defaults
   setDirection("OUT");

@@ -556,3 +556,105 @@ test.describe("Toast Notifications", () => {
     await expect(page.locator("#toast")).toHaveText("Test toast");
   });
 });
+
+// ---------------------------------------------------------------------------
+//  Provident Fund Calculator
+// ---------------------------------------------------------------------------
+
+test.describe("Provident Fund Calculator", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector("#auth-screen:not(.hidden)", { timeout: 10000 });
+    await page.evaluate(() => {
+      document.getElementById("auth-screen").classList.add("hidden");
+      document.getElementById("boot-screen").classList.add("hidden");
+      document.getElementById("app").classList.remove("hidden");
+      // switch to networth view
+      document.querySelectorAll(".tab").forEach((t) =>
+        t.classList.toggle("active", t.dataset.view === "networth"));
+      document.querySelectorAll(".view").forEach((v) =>
+        v.classList.toggle("active", v.id === "view-networth"));
+    });
+  });
+
+  test("PF Calculator button is visible in Assets section", async ({ page }) => {
+    const btn = page.locator("#open-pf-calc");
+    await expect(btn).toBeVisible();
+    await expect(btn).toContainText("PF Calculator");
+  });
+
+  test("clicking PF Calculator button opens the modal", async ({ page }) => {
+    await page.click("#open-pf-calc");
+    const modal = page.locator("#pf-modal-overlay");
+    await expect(modal).toBeVisible();
+    await expect(page.locator("#pf-modal-title")).toContainText("Provident Fund");
+    await expect(page.locator("#pf-result-net")).toBeVisible();
+    await expect(page.locator("#pf-emp-monthly")).toHaveValue("25000");
+  });
+
+  test("modal closes when clicking close button", async ({ page }) => {
+    await page.click("#open-pf-calc");
+    await expect(page.locator("#pf-modal-overlay")).toBeVisible();
+    await page.click("#pf-modal-close");
+    await expect(page.locator("#pf-modal-overlay")).toBeHidden();
+  });
+
+  test("modal closes when clicking Escape key", async ({ page }) => {
+    await page.click("#open-pf-calc");
+    await expect(page.locator("#pf-modal-overlay")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#pf-modal-overlay")).toBeHidden();
+  });
+
+  test("recalculates when changing employee monthly contribution", async ({ page }) => {
+    await page.click("#open-pf-calc");
+    const netBefore = await page.locator("#pf-result-net").textContent();
+    await page.fill("#pf-emp-monthly", "50000");
+    const netAfter = await page.locator("#pf-result-net").textContent();
+    expect(netBefore).not.toEqual(netAfter);
+  });
+
+  test("employer match toggle updates employer contribution", async ({ page }) => {
+    await page.click("#open-pf-calc");
+    await page.fill("#pf-emp-monthly", "20000");
+    // Click 50% match
+    await page.click('.pf-match-seg .seg[data-match="0.5"]');
+    await expect(page.locator("#pf-employer-monthly")).toHaveValue("10000");
+    // Click 0% match
+    await page.click('.pf-match-seg .seg[data-match="0"]');
+    await expect(page.locator("#pf-employer-monthly")).toHaveValue("0");
+    // Click 100% match
+    await page.click('.pf-match-seg .seg[data-match="1"]');
+    await expect(page.locator("#pf-employer-monthly")).toHaveValue("20000");
+  });
+
+  test("toggling tax on/off updates tax badge and take-home amount", async ({ page }) => {
+    await page.click("#open-pf-calc");
+    // Tax is checked initially
+    await expect(page.locator("#pf-hero-tax-status")).toContainText("Tax Applied");
+    const netWithTax = await page.locator("#pf-result-net").textContent();
+
+    // Toggle tax off
+    await page.click(".pf-switch-label");
+    await expect(page.locator("#pf-hero-tax-status")).toContainText("Tax-Exempt");
+    const netWithoutTax = await page.locator("#pf-result-net").textContent();
+    expect(netWithTax).not.toEqual(netWithoutTax);
+  });
+
+  test("year-by-year schedule table expands and displays rows", async ({ page }) => {
+    await page.click("#open-pf-calc");
+    await expect(page.locator("#pf-schedule-wrap")).toBeHidden();
+    await page.click("#pf-schedule-toggle");
+    await expect(page.locator("#pf-schedule-wrap")).toBeVisible();
+    const rows = page.locator("#pf-schedule-tbody tr");
+    const count = await rows.count();
+    expect(count).toBeGreaterThan(0);
+  });
+
+  test("year duration chips update input and recalculate", async ({ page }) => {
+    await page.click("#open-pf-calc");
+    await page.click('.pf-year-chip[data-years="25"]');
+    await expect(page.locator("#pf-years-num")).toHaveValue("25");
+    await expect(page.locator("#pf-years-label")).toContainText("25 Years");
+  });
+});

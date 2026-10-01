@@ -181,7 +181,12 @@
         <div class="panel">
           <div class="panel-head">
             <h2>💎 Assets / Money Bound</h2>
-            <strong class="panel-total" id="assets-total">Rs 0</strong>
+            <div class="panel-actions">
+              <button type="button" id="open-pf-calc" class="btn btn-secondary btn-sm" title="Calculate future provident fund with employer match & taxes">
+                🧮 PF Calculator
+              </button>
+              <strong class="panel-total" id="assets-total">Rs 0</strong>
+            </div>
           </div>
           <div id="assets-list" class="account-list"></div>
           <form id="asset-add-form" class="account-add">
@@ -249,6 +254,219 @@
   </div>
 
   <div id="toast" class="toast hidden"></div>
+
+  <!-- ============ PROVIDENT FUND CALCULATOR MODAL ============ -->
+  <div id="pf-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pf-modal-title">
+    <div class="modal-card pf-modal-card">
+      <div class="pf-modal-header">
+        <div>
+          <h3 id="pf-modal-title">🧮 Provident Fund (PF) Calculator</h3>
+          <p class="pf-modal-sub">Calculate future corpus, employer match compounding & tax deductions</p>
+        </div>
+        <button type="button" id="pf-modal-close" class="modal-close-btn" aria-label="Close calculator">✕</button>
+      </div>
+
+      <div class="pf-modal-body">
+        <!-- Results Hero Banner -->
+        <div class="pf-hero-card">
+          <div class="pf-hero-top">
+            <span class="pf-hero-label">Projected Net Maturity Corpus (Take-Home)</span>
+            <span id="pf-hero-tax-status" class="pf-badge pf-badge-tax">10% Tax Applied</span>
+          </div>
+          <div class="pf-hero-value" id="pf-result-net">Rs 0</div>
+          <div class="pf-hero-meta">
+            <span>Gross Corpus: <strong id="pf-result-gross">Rs 0</strong></span>
+            <span class="pf-meta-sep">•</span>
+            <span id="pf-hero-tax-line">Tax Deduction: <strong id="pf-result-tax" class="text-danger">− Rs 0</strong></span>
+          </div>
+
+          <!-- Stacked Bar Representation -->
+          <div class="pf-stacked-bar" title="Corpus breakdown">
+            <div id="pf-bar-emp" class="pf-bar-seg emp" style="width: 35%;"></div>
+            <div id="pf-bar-employer" class="pf-bar-seg employer" style="width: 35%;"></div>
+            <div id="pf-bar-interest" class="pf-bar-seg interest" style="width: 30%;"></div>
+          </div>
+          <div class="pf-bar-legend">
+            <span class="leg-item"><span class="dot emp"></span> Employee: <strong id="pf-leg-emp-pct">0%</strong></span>
+            <span class="leg-item"><span class="dot employer"></span> Employer: <strong id="pf-leg-employer-pct">0%</strong></span>
+            <span class="leg-item"><span class="dot interest"></span> Interest: <strong id="pf-leg-interest-pct">0%</strong></span>
+          </div>
+        </div>
+
+        <!-- 4 Key Stat Cards -->
+        <div class="pf-stat-grid">
+          <div class="pf-stat-card">
+            <span class="pf-stat-title">👤 Employee Total</span>
+            <strong id="pf-stat-emp" class="pf-stat-num">Rs 0</strong>
+            <small class="pf-stat-hint" id="pf-stat-emp-sub">Rs 25,000 / mo</small>
+          </div>
+          <div class="pf-stat-card">
+            <span class="pf-stat-title">🏢 Employer Match</span>
+            <strong id="pf-stat-employer" class="pf-stat-num">Rs 0</strong>
+            <small class="pf-stat-hint" id="pf-stat-employer-sub">100% match</small>
+          </div>
+          <div class="pf-stat-card">
+            <span class="pf-stat-title">📈 Interest Earned</span>
+            <strong id="pf-stat-interest" class="pf-stat-num text-success">Rs 0</strong>
+            <small class="pf-stat-hint" id="pf-stat-interest-sub">@ 12% p.a.</small>
+          </div>
+          <div class="pf-stat-card">
+            <span class="pf-stat-title">🏛️ Est. Tax Deduction</span>
+            <strong id="pf-stat-tax" class="pf-stat-num text-danger">Rs 0</strong>
+            <small class="pf-stat-hint" id="pf-stat-tax-sub">10% rate</small>
+          </div>
+        </div>
+
+        <!-- Inputs Form Grid -->
+        <div class="pf-form-grid">
+          <!-- Current Balance & Employee Monthly -->
+          <div class="pf-field">
+            <div class="pf-label-row">
+              <label for="pf-initial-balance">Current PF Balance (Rs)</label>
+              <button type="button" id="pf-fetch-asset" class="link-btn" title="Use balance from existing Provident Fund asset">Fetch from Assets</button>
+            </div>
+            <input type="number" id="pf-initial-balance" min="0" step="5000" value="0" placeholder="0" inputmode="decimal" />
+          </div>
+
+          <div class="pf-field">
+            <label for="pf-emp-monthly">Employee Monthly Contribution (Rs)</label>
+            <input type="number" id="pf-emp-monthly" min="0" step="1000" value="25000" placeholder="25000" inputmode="decimal" />
+            <div class="pf-chips">
+              <button type="button" class="pf-chip" data-field="emp" data-val="10000">10k</button>
+              <button type="button" class="pf-chip active" data-field="emp" data-val="25000">25k</button>
+              <button type="button" class="pf-chip" data-field="emp" data-val="50000">50k</button>
+              <button type="button" class="pf-chip" data-field="emp" data-val="100000">100k</button>
+            </div>
+          </div>
+
+          <!-- Employer Match & Monthly Match -->
+          <div class="pf-field">
+            <label>Employer Match Ratio</label>
+            <div class="segmented pf-match-seg" role="radiogroup" aria-label="Employer Match Ratio">
+              <button type="button" class="seg active" data-match="1">100% (1:1)</button>
+              <button type="button" class="seg" data-match="0.5">50%</button>
+              <button type="button" class="seg" data-match="0">0%</button>
+              <button type="button" class="seg" data-match="custom">Custom</button>
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label for="pf-employer-monthly">Employer Monthly Match (Rs)</label>
+            <input type="number" id="pf-employer-monthly" min="0" step="1000" value="25000" placeholder="25000" inputmode="decimal" />
+            <span class="pf-hint">Total monthly deposit: <strong id="pf-total-monthly">Rs 50,000</strong></span>
+          </div>
+
+          <!-- Duration & Interest Rate -->
+          <div class="pf-field">
+            <div class="pf-label-row">
+              <label for="pf-years-range">Duration: <strong id="pf-years-label">15 Years</strong></label>
+            </div>
+            <div class="pf-range-wrap">
+              <input type="range" id="pf-years-range" min="1" max="40" value="15" />
+              <input type="number" id="pf-years-num" min="1" max="40" value="15" class="pf-num-compact" />
+            </div>
+            <div class="pf-chips">
+              <button type="button" class="pf-year-chip" data-years="5">5y</button>
+              <button type="button" class="pf-year-chip" data-years="10">10y</button>
+              <button type="button" class="pf-year-chip active" data-years="15">15y</button>
+              <button type="button" class="pf-year-chip" data-years="20">20y</button>
+              <button type="button" class="pf-year-chip" data-years="25">25y</button>
+              <button type="button" class="pf-year-chip" data-years="30">30y</button>
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label for="pf-interest-rate">Expected Annual Return Rate (%)</label>
+            <input type="number" id="pf-interest-rate" min="1" max="30" step="0.25" value="12" placeholder="12" inputmode="decimal" />
+            <div class="pf-chips">
+              <button type="button" class="pf-rate-chip" data-rate="8">8%</button>
+              <button type="button" class="pf-rate-chip" data-rate="10">10%</button>
+              <button type="button" class="pf-rate-chip active" data-rate="12">12%</button>
+              <button type="button" class="pf-rate-chip" data-rate="14">14%</button>
+              <button type="button" class="pf-rate-chip" data-rate="16">16%</button>
+            </div>
+          </div>
+
+          <!-- Annual Increment & Taxes -->
+          <div class="pf-field">
+            <label for="pf-annual-increment">Annual Salary / Contribution Increment (%)</label>
+            <input type="number" id="pf-annual-increment" min="0" max="25" step="1" value="5" placeholder="5" inputmode="decimal" />
+            <span class="pf-hint">Simulates annual raises in contribution (0% for flat)</span>
+          </div>
+
+          <div class="pf-field pf-tax-panel">
+            <div class="pf-tax-toggle-row">
+              <label class="pf-switch-label" for="pf-tax-toggle">
+                <input type="checkbox" id="pf-tax-toggle" checked />
+                <span class="pf-switch-slider"></span>
+                <span class="pf-switch-text">Deduct Taxes on Withdrawal</span>
+              </label>
+            </div>
+
+            <div id="pf-tax-details" class="pf-tax-details">
+              <div class="pf-tax-inputs">
+                <div class="pf-tax-rate-wrap">
+                  <label for="pf-tax-rate">Tax Rate (%)</label>
+                  <input type="number" id="pf-tax-rate" min="0" max="50" step="0.5" value="10" inputmode="decimal" />
+                </div>
+                <div class="pf-tax-scope-wrap">
+                  <label for="pf-tax-scope">Tax Scope</label>
+                  <select id="pf-tax-scope">
+                    <option value="interest" selected>Tax on Returns / Interest Only</option>
+                    <option value="total">Tax on Total Maturity Corpus</option>
+                  </select>
+                </div>
+              </div>
+              <div class="pf-chips">
+                <button type="button" class="pf-tax-chip" data-tax="0">0% (Exempt)</button>
+                <button type="button" class="pf-tax-chip" data-tax="5">5%</button>
+                <button type="button" class="pf-tax-chip active" data-tax="10">10%</button>
+                <button type="button" class="pf-tax-chip" data-tax="15">15%</button>
+                <button type="button" class="pf-tax-chip" data-tax="20">20%</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expandable Year-by-Year Schedule -->
+        <div class="pf-schedule-section">
+          <button type="button" id="pf-schedule-toggle" class="btn btn-ghost btn-block btn-sm">
+            <span>📅 View Year-by-Year Growth Table</span>
+            <span id="pf-schedule-arrow">▼</span>
+          </button>
+          <div id="pf-schedule-wrap" class="pf-schedule-wrap hidden">
+            <div class="pf-table-responsive">
+              <table class="pf-table">
+                <thead>
+                  <tr>
+                    <th>Year</th>
+                    <th>Employee Contrib.</th>
+                    <th>Employer Match</th>
+                    <th>Interest Earned</th>
+                    <th>Year-End Balance</th>
+                    <th>Net After Tax</th>
+                  </tr>
+                </thead>
+                <tbody id="pf-schedule-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer Actions -->
+      <div class="pf-modal-footer">
+        <div class="pf-footer-left">
+          <button type="button" id="pf-save-asset-btn" class="btn btn-primary" title="Save or update this as an Asset in your portfolio">
+            💎 Save to Assets
+          </button>
+        </div>
+        <div class="pf-footer-right">
+          <button type="button" id="pf-modal-close-btn" class="btn btn-ghost">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script type="module">import "@app";</script>
 </body>

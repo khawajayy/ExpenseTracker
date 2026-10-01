@@ -89,6 +89,12 @@ body {
   background: transparent; border-color: var(--border); color: var(--text-dim);
 }
 .btn-ghost:hover { background: var(--panel-2); color: var(--text); border-color: var(--text-faint); }
+.btn-secondary {
+  background: var(--panel-2); border: 1px solid var(--border);
+  color: var(--primary); font-weight: 600;
+}
+.btn-secondary:hover { background: var(--border); border-color: var(--primary); color: var(--primary-hover); }
+.panel-actions { display: flex; align-items: center; gap: 12px; }
 .btn-danger {
   background: linear-gradient(135deg, var(--danger), #a33d47);
   color: #fff; border: none;
@@ -398,6 +404,399 @@ body {
 .modal-input-wrap input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow); }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
+/* ---------- Provident Fund Calculator Modal ---------- */
+.pf-modal-card {
+  max-width: 680px;
+  width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 16px;
+}
+.pf-modal-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  background: var(--panel);
+}
+.pf-modal-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+.pf-modal-sub {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin: 0;
+}
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.modal-close-btn:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+.pf-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pf-hero-card {
+  background: linear-gradient(135deg, rgba(201,152,90,0.12), rgba(201,152,90,0.02)), var(--panel-2);
+  border: 1px solid rgba(201,152,90,0.3);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.pf-hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.pf-hero-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary);
+}
+.pf-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+.pf-badge-tax {
+  background: rgba(235, 87, 87, 0.15);
+  color: var(--expense);
+  border: 1px solid rgba(235, 87, 87, 0.25);
+}
+.pf-badge-tax.exempt {
+  background: rgba(76, 175, 124, 0.15);
+  color: var(--income);
+  border: 1px solid rgba(76, 175, 124, 0.25);
+}
+.pf-hero-value {
+  font-size: clamp(24px, 5.5vw, 34px);
+  font-weight: 800;
+  color: var(--text);
+  margin: 6px 0 8px;
+  letter-spacing: -0.02em;
+}
+.pf-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+  flex-wrap: wrap;
+}
+.pf-meta-sep {
+  color: var(--text-faint);
+}
+.pf-stacked-bar {
+  display: flex;
+  height: 9px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--border);
+  margin: 14px 0 8px;
+}
+.pf-bar-seg {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+.pf-bar-seg.emp {
+  background: #3b82f6;
+}
+.pf-bar-seg.employer {
+  background: var(--primary);
+}
+.pf-bar-seg.interest {
+  background: var(--income);
+}
+.pf-bar-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  flex-wrap: wrap;
+}
+.leg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot.emp { background: #3b82f6; }
+.dot.employer { background: var(--primary); }
+.dot.interest { background: var(--income); }
+
+.pf-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.pf-stat-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pf-stat-title {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.pf-stat-num {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pf-stat-hint {
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+.text-success { color: var(--income) !important; }
+.text-danger { color: var(--expense) !important; }
+
+.pf-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+}
+.pf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pf-field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.pf-field input[type=number],
+.pf-field input[type=text],
+.pf-field select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 13.5px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.pf-field input:focus, .pf-field select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+.pf-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pf-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.pf-chip, .pf-year-chip, .pf-rate-chip, .pf-tax-chip {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 20px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pf-chip:hover, .pf-year-chip:hover, .pf-rate-chip:hover, .pf-tax-chip:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+.pf-chip.active, .pf-year-chip.active, .pf-rate-chip.active, .pf-tax-chip.active {
+  background: rgba(201, 152, 90, 0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.pf-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+.pf-range-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pf-range-wrap input[type=range] {
+  flex: 1;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.pf-num-compact {
+  width: 58px;
+  text-align: center;
+  padding: 5px 8px !important;
+}
+.pf-match-seg {
+  margin-bottom: 2px;
+}
+.pf-match-seg .seg {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+/* Tax panel & toggle */
+.pf-tax-panel {
+  grid-column: 1 / -1;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.pf-tax-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pf-switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--text) !important;
+}
+.pf-switch-label input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.pf-switch-slider {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  background-color: var(--border);
+  border-radius: 22px;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+.pf-switch-slider::before {
+  content: "";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.pf-switch-label input:checked + .pf-switch-slider {
+  background-color: var(--primary);
+}
+.pf-switch-label input:checked + .pf-switch-slider::before {
+  transform: translateX(16px);
+}
+.pf-tax-details {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pf-tax-inputs {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+}
+.pf-tax-rate-wrap, .pf-tax-scope-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Schedule Table */
+.pf-schedule-section {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.pf-table-responsive {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-top: 10px;
+}
+.pf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.pf-table th, .pf-table td {
+  padding: 8px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+.pf-table th {
+  background: var(--panel-2);
+  color: var(--text-dim);
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.pf-table th:first-child, .pf-table td:first-child {
+  text-align: left;
+}
+.pf-table tbody tr:hover {
+  background: var(--panel-2);
+}
+
+.pf-modal-footer {
+  padding: 14px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--panel);
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 640px) {
   .topbar { padding: 10px 14px; }
@@ -416,4 +815,10 @@ body {
 }
 @media (min-width: 641px) and (max-width: 800px) {
   .stat-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+}
+@media (max-width: 640px) {
+  .pf-stat-grid { grid-template-columns: 1fr 1fr; }
+  .pf-form-grid { grid-template-columns: 1fr; }
+  .pf-tax-inputs { grid-template-columns: 1fr; }
+  .pf-modal-card { width: 100%; max-height: 96vh; border-radius: var(--radius); }
 }
